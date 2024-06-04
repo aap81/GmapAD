@@ -5,6 +5,11 @@ import torch.nn.functional as F
 from torch_geometric.datasets import TUDataset
 import numpy as np
 import os
+import time
+import logging
+
+logging.basicConfig(filename='script_log.log', level=logging.INFO, format='\nSTRT- %(message)s')
+
 
 def get_repo_root():
     current_dir = os.path.abspath(os.path.dirname(__file__))
@@ -14,6 +19,25 @@ def get_repo_root():
             raise FileNotFoundError("Could not find the root directory of the repository")
         current_dir = parent_dir
     return current_dir
+
+def milliseconds_to_seconds(milliseconds):
+    seconds = milliseconds / 1000
+    return f"{seconds:.2f} seconds"
+
+# replace all log_data and log_data commands to log_data and log at the same time
+def log_data(text):
+    print(text)
+    logging.info(text)
+
+# log time with a start time and message
+# elapsed time with respect to start time
+def log_time(start_time, action_start_time, message):
+    current_time = time.time()
+    elapsed_time_since_start = (current_time - start_time) * 1000  # Convert to milliseconds
+    elapsed_time_since_last = (current_time - action_start_time) * 1000  # Convert to milliseconds
+    current_time_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+    log_data(f"[TIMER: {current_time_str} | {message} | Time_taken_since_start: {elapsed_time_since_start:.2f} ms ({milliseconds_to_seconds(elapsed_time_since_start)}) | Time_taken_since_last: {elapsed_time_since_last:.2f} ms ({milliseconds_to_seconds(elapsed_time_since_last)})]")
+
 
 def gen_graphs(records):
     node_name = []
@@ -90,7 +114,7 @@ def gen_graphs(records):
 
 def load_dataset(dataset, args):
 
-    root_path = os.path.join(get_repo_root, 'data')
+    root_path = os.path.join(get_repo_root(), 'data')
     data = TUDataset(root=f'{root_path}/TUDataset', name=f'{dataset}')
     return data
     # if False and dataset in ['KKI', 'OHSU']:

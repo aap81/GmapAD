@@ -6,7 +6,7 @@ import numpy as np
 import sys
 from sklearn import svm
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
-from utils import load_dataset, pos_graphs_pool, print_dataset_stat, get_repo_root
+from utils import load_dataset, pos_graphs_pool, print_dataset_stat, get_repo_root, log_data, log_time, milliseconds_to_seconds
 from GNN import GmapAD_GCN, GmapAD_GAT, train_gnn
 from evolution import evolution_svm
 import os
@@ -19,7 +19,6 @@ import warnings
 
 warnings.warn = warn
 gpu_execution_enabled = False
-logging.basicConfig(filename='script_log.log', level=logging.INFO, format='\nSTRT- %(message)s')
 
 
 # Get the root directory of the repository
@@ -73,25 +72,6 @@ def arg_parser():
 
     args = parser.parse_args()
     return args
-
-
-def milliseconds_to_seconds(milliseconds):
-    seconds = milliseconds / 1000
-    return f"{seconds:.2f} seconds"
-
-# replace all log_data and log_data commands to log_data and log at the same time
-def log_data(text):
-    print(text)
-    logging.info(text)
-
-# log time with a start time and message
-# elapsed time with respect to start time
-def log_time(start_time, action_start_time, message):
-    current_time = time.time()
-    elapsed_time_since_start = (current_time - start_time) * 1000  # Convert to milliseconds
-    elapsed_time_since_last = (current_time - action_start_time) * 1000  # Convert to milliseconds
-    current_time_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-    log_data(f"[TIMER: {current_time_str} | {message} | Time_taken_since_start: {elapsed_time_since_start:.2f} ms ({milliseconds_to_seconds(elapsed_time_since_start)}) | Time_taken_since_last: {elapsed_time_since_last:.2f} ms ({milliseconds_to_seconds(elapsed_time_since_last)})]")
 
 def downsample(ds_rate, ds_cl, graphs):
     ds_rate = args.ds_rate
