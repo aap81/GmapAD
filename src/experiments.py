@@ -5,7 +5,7 @@ import logging
 import time
 
 # Define the datasets and GNN layers to test
-datasets = ['OHSU']
+datasets = ['KKI', 'OHSU', 'MUTAG', 'PROTEINS', 'AIDS', 'IMDB-BINARY', 'Mutagenicity']
 gnn_layers = ['GCN', 'GAT']
 
 # Ensure the required directories exist
@@ -44,7 +44,7 @@ def run_experiments():
             if result.stderr:
                 log_data(f"Error: {result.stderr}")
 
-            log_data(f"[End of Experiment - Dataset: {dataset}, Layer type: {gnn_layer}]")
+            log_data(f"[End of Experiment {experiment_counter + 1} - Dataset: {dataset}, Layer type: {gnn_layer}]")
             experiment_counter += 1
 
 if __name__ == "__main__":
