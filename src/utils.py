@@ -6,6 +6,15 @@ from torch_geometric.datasets import TUDataset
 import numpy as np
 import os
 
+def get_repo_root():
+    current_dir = os.path.abspath(os.path.dirname(__file__))
+    while not os.path.isdir(os.path.join(current_dir, '.git')):
+        parent_dir = os.path.abspath(os.path.join(current_dir, os.pardir))
+        if parent_dir == current_dir:
+            raise FileNotFoundError("Could not find the root directory of the repository")
+        current_dir = parent_dir
+    return current_dir
+
 def gen_graphs(records):
     node_name = []
     ## Get all node names and assign a global ID to each node
@@ -81,7 +90,7 @@ def gen_graphs(records):
 
 def load_dataset(dataset, args):
 
-    root_path = "F:\\workspace\\GmapAD\\data\\"
+    root_path = os.path.join(get_repo_root, 'data')
     data = TUDataset(root=f'{root_path}/TUDataset', name=f'{dataset}')
     return data
     # if False and dataset in ['KKI', 'OHSU']:

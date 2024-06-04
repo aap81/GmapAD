@@ -6,21 +6,27 @@ import numpy as np
 import sys
 from sklearn import svm
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
-from utils import load_dataset, pos_graphs_pool, print_dataset_stat
+from utils import load_dataset, pos_graphs_pool, print_dataset_stat, get_repo_root
 from GNN import GmapAD_GCN, GmapAD_GAT, train_gnn
 from evolution import evolution_svm
 import os
 import random
 import logging
 import time
-logging.basicConfig(filename='script_log.log', level=logging.INFO, format='\nSTRT- %(message)s')
 def warn(*args, **kwargs):
     pass
 import warnings
+
 warnings.warn = warn
 gpu_execution_enabled = False
+logging.basicConfig(filename='script_log.log', level=logging.INFO, format='\nSTRT- %(message)s')
 
-data_root_path = "F:\\workspace\\GmapAD\\data"
+
+# Get the root directory of the repository
+repo_root = get_repo_root()
+
+# Construct the path to the data directory
+data_root_path = os.path.join(repo_root, 'data')
 
 def arg_parser():
     parser = argparse.ArgumentParser()
@@ -215,5 +221,3 @@ if __name__ == "__main__":
         log_data(f"F1 Score: {f1}")
         log_data("Confusion Matrix:")
         log_data(cm)
-        
- 
