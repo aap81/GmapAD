@@ -5,7 +5,7 @@ import logging
 import time
 
 # Define the datasets and GNN layers to test
-datasets = ['KKI', 'OHSU', 'MUTAG', 'PROTEINS', 'AIDS', 'IMDB-BINARY', 'Mutagenicity']
+datasets = ['KKI', 'OHSU', 'MUTAG', 'PROTEINS', 'AIDS', 'IMDB-BINARY', 'Mutagenicity'][::-1]
 gnn_layers = ['GCN', 'GAT']
 
 # Ensure the required directories exist

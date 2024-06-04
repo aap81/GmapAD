@@ -296,7 +296,7 @@ def print_dataset_stat(args, graphs):
             a_nodes += graph.num_nodes
             a_edges += graph.num_edges
     
-    print(f"Graph Statistics {args.dataset} : ")
-    print("{:<8} | {:<10} | {:<10} | {:<10} ".format("Class", "#Graphs", "Avg. V", "Avg. E" ))
-    print("{:<8} | {:<10} | {:<10} | {:<10} ".format("G_0", a_graphs, a_nodes/a_graphs, a_edges/a_graphs ))
-    print("{:<8} | {:<10} | {:<10} | {:<10} ".format("G_1", len(graphs) - a_graphs,(t_nodes - a_nodes) /(len(graphs) - a_graphs),  (t_edges - a_edges) /(len(graphs) - a_graphs) ))
+    log_data(f"Graph Statistics {args.dataset} : ")
+    log_data("{:<8} | {:<10} | {:<10} | {:<10} ".format("Class", "#Graphs", "Avg. V", "Avg. E" ))
+    log_data("{:<8} | {:<10} | {:<10} | {:<10} ".format("G_0", a_graphs, a_nodes/a_graphs, a_edges/a_graphs ))
+    log_data("{:<8} | {:<10} | {:<10} | {:<10} ".format("G_1", len(graphs) - a_graphs,(t_nodes - a_nodes) /(len(graphs) - a_graphs),  (t_edges - a_edges) /(len(graphs) - a_graphs) ))
