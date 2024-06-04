@@ -104,6 +104,12 @@ def downsample(ds_rate, ds_cl, graphs):
     # else:
     #     return graphs
 
+def ensure_directories(dataset, gnn_layer):
+    repo_root = get_repo_root()
+    data_dir = os.path.join(repo_root, 'data', dataset, gnn_layer)
+    os.makedirs(data_dir, exist_ok=True)
+    log_data(f"Ensured directory exists: {data_dir}")
+
 if __name__ == "__main__":
     start_time = time.time()
     action_start_time = time.time()
@@ -115,6 +121,7 @@ if __name__ == "__main__":
         device_str = 'cuda' if torch.cuda.is_available() else 'cpu'
     device = torch.device(device_str)
     args.device = device
+    ensure_directories(args.dataset, args.gnn_layer)
     log_data(f"Training device: {device}")
     log_data(f"loading dataset {args.dataset}")
     log_data(f"Testing Round: {args.round}")
