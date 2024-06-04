@@ -5,6 +5,39 @@ import torch.nn.functional as F
 from torch_geometric.datasets import TUDataset
 import numpy as np
 import os
+import time
+import logging
+
+logging.basicConfig(filename='script_log.log', level=logging.INFO, format='\nSTRT- %(message)s')
+
+
+def get_repo_root():
+    current_dir = os.path.abspath(os.path.dirname(__file__))
+    while not os.path.isdir(os.path.join(current_dir, '.git')):
+        parent_dir = os.path.abspath(os.path.join(current_dir, os.pardir))
+        if parent_dir == current_dir:
+            raise FileNotFoundError("Could not find the root directory of the repository")
+        current_dir = parent_dir
+    return current_dir
+
+def milliseconds_to_seconds(milliseconds):
+    seconds = milliseconds / 1000
+    return f"{seconds:.2f} seconds"
+
+# replace all log_data and log_data commands to log_data and log at the same time
+def log_data(text):
+    print(text)
+    logging.info(text)
+
+# log time with a start time and message
+# elapsed time with respect to start time
+def log_time(start_time, action_start_time, message):
+    current_time = time.time()
+    elapsed_time_since_start = (current_time - start_time) * 1000  # Convert to milliseconds
+    elapsed_time_since_last = (current_time - action_start_time) * 1000  # Convert to milliseconds
+    current_time_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+    log_data(f"[TIMER: {current_time_str} | {message} | Time_taken_since_start: {elapsed_time_since_start:.2f} ms ({milliseconds_to_seconds(elapsed_time_since_start)}) | Time_taken_since_last: {elapsed_time_since_last:.2f} ms ({milliseconds_to_seconds(elapsed_time_since_last)})]")
+
 
 def gen_graphs(records):
     node_name = []
@@ -81,52 +114,53 @@ def gen_graphs(records):
 
 def load_dataset(dataset, args):
 
-    root_path = "../data/"
+    root_path = os.path.join(get_repo_root(), 'data')
+    data = TUDataset(root=f'{root_path}/TUDataset', name=f'{dataset}')
+    return data
+    # if False and dataset in ['KKI', 'OHSU']:
+    #     with open(root_path+"\\"+dataset+"\\output\\{}.nel".format(dataset)) as f:
+    #         data = f.readlines()
+    #     f.close()
+    #     graphs, node_index =  gen_graphs(data)
+    #     # create a graph data for each graph in graphs
+    #     dataset = []
+    #     for graph in graphs:
+    #         nodes = graphs[graph]['nodes']
+    #         edges = graphs[graph]['edges']
+    #         label = graphs[graph]['label']
+    #         label = np.array([label])
+    #         label = torch.tensor(label,dtype=torch.long)
+    #         st_nodes = []
+    #         ed_nodes = []
+    #         w= []
+    #         for edge in edges:
+    #             node_s = edges[edge][0]
+    #             node_e = edges[edge][1]
+    #             st_nodes.append(node_index[nodes[edges[edge][0]]])
+    #             ed_nodes.append(node_index[nodes[edges[edge][1]]])
+    #             w.append(float(edges[edge][2]))
+    #         selflinks = list(range(0,len(node_index)))
+    #         st_nodes = st_nodes + selflinks
+    #         ed_nodes = ed_nodes + selflinks
 
-    if dataset in ['KKI', 'OHSU']:
-        with open(root_path+"BrainNetwork/{}.nel".format(dataset)) as f:
-            data = f.readlines()
-        f.close()
-        graphs, node_index =  gen_graphs(data)
-        # create a graph data for each graph in graphs
-        dataset = []
-        for graph in graphs:
-            nodes = graphs[graph]['nodes']
-            edges = graphs[graph]['edges']
-            label = graphs[graph]['label']
-            label = np.array([label])
-            label = torch.tensor(label,dtype=torch.long)
-            st_nodes = []
-            ed_nodes = []
-            w= []
-            for edge in edges:
-                node_s = edges[edge][0]
-                node_e = edges[edge][1]
-                st_nodes.append(node_index[nodes[edges[edge][0]]])
-                ed_nodes.append(node_index[nodes[edges[edge][1]]])
-                w.append(float(edges[edge][2]))
-            selflinks = list(range(0,len(node_index)))
-            st_nodes = st_nodes + selflinks
-            ed_nodes = ed_nodes + selflinks
-
-            st_nodes = torch.tensor(st_nodes, dtype=torch.long)
-            ed_nodes = torch.tensor(ed_nodes, dtype=torch.long)
-            w = torch.LongTensor(w)
-            edge_index = torch.cat((st_nodes, ed_nodes)).reshape(2,st_nodes.shape[0])
-            w = w.reshape(w.shape[0],1)
+    #         st_nodes = torch.tensor(st_nodes, dtype=torch.long)
+    #         ed_nodes = torch.tensor(ed_nodes, dtype=torch.long)
+    #         w = torch.LongTensor(w)
+    #         edge_index = torch.cat((st_nodes, ed_nodes)).reshape(2,st_nodes.shape[0])
+    #         w = w.reshape(w.shape[0],1)
             
-            spm = to_scipy_sparse_matrix(edge_index)
-            spm = spm.toarray()
-            spm.astype(np.float64)
-            spm = torch.tensor(spm, dtype=torch.float)
-            graph = Data(x=spm, edge_index=edge_index, y=label)
-            dataset.append(graph)
+    #         spm = to_scipy_sparse_matrix(edge_index)
+    #         spm = spm.toarray()
+    #         spm.astype(np.float64)
+    #         spm = torch.tensor(spm, dtype=torch.float)
+    #         graph = Data(x=spm, edge_index=edge_index, y=label)
+    #         dataset.append(graph)
         
-        dataset = build_x(dataset)
-        return dataset
-    else:
-        data = TUDataset(root=f'{root_path}/TUDataset', name=f'{dataset}')
-        return data
+    #     dataset = build_x(dataset)
+    #     return dataset
+    # else:
+    #     data = TUDataset(root=f'{root_path}/TUDataset', name=f'{dataset}')
+    #     return data
 
 def build_x(graphs):
     num_nodes = graphs[0].num_nodes
@@ -160,46 +194,59 @@ def pos_graphs_pool(graphs, model, args):
     '''
     This function returns the node pool, G0 ... GN are all from postive graphs in the trainning set.
     '''
-    if args.dataset in ['KKI', 'OHSU']:
-        n_reps = []
-        g_reps = []
-        for graph in graphs:
-            graph.to(args.device)
-            _, n_rep, g_rep = model(graph)
-            n_reps.append(n_rep.detach())
-            g_reps.append(g_rep.detach())
-        n_reps = torch.stack(n_reps)
-        g_reps = torch.stack(g_reps)
+    # if False and args.dataset in ['KKI', 'OHSU']:
+    #     n_reps = []
+    #     g_reps = []
+    #     for graph in graphs:
+    #         graph.to(args.device)
+    #         _, n_rep, g_rep = model(graph)
+    #         n_reps.append(n_rep.detach())
+    #         g_reps.append(g_rep.detach())
+    #     n_reps = torch.stack(n_reps)
+    #     g_reps = torch.stack(g_reps)
         
-        rep_stg= args.n_p_stg
-        # return the node pool according to the pool genenrating strategy
-        if rep_stg == "mean":
-            node_pool = torch.mean(n_reps, 0)
-        if rep_stg == "sum":
-            node_pool = torch.sum(n_reps, 0)
-        if rep_stg == "max":
-            node_pool = torch.max(n_reps, 0).values
-        if rep_stg == "min":
-            node_pool = torch.min(n_reps, 0).values
-        if rep_stg == "concat":
-            node_pool = n_reps[0]
-            for n_rep in n_reps[1:]:
-                node_pool = torch.cat((node_pool, n_rep), dim=0)
-            node_pool = top_k_nodes(node_pool, g_reps, args)
-    else:
-        n_reps = []
-        g_reps = []
-        for graph in graphs:
-            graph.to(args.device)
-            _, n_rep, g_rep = model(graph)
-            n_reps.append(n_rep.detach())
-            g_reps.append(g_rep.detach())
-        node_pool = n_reps[0]
-        for n_rep in n_reps[1:]:
-            node_pool = torch.cat((node_pool, n_rep), dim=0)
-        g_reps = torch.stack(g_reps)
-        g_reps = g_reps.squeeze()
-        node_pool = top_k_nodes(node_pool, g_reps, args)
+    #     rep_stg= args.n_p_stg
+    #     # return the node pool according to the pool genenrating strategy
+    #     if rep_stg == "mean":
+    #         node_pool = torch.mean(n_reps, 0)
+    #     if rep_stg == "sum":
+    #         node_pool = torch.sum(n_reps, 0)
+    #     if rep_stg == "max":
+    #         node_pool = torch.max(n_reps, 0).values
+    #     if rep_stg == "min":
+    #         node_pool = torch.min(n_reps, 0).values
+    #     if rep_stg == "concat":
+    #         node_pool = n_reps[0]
+    #         for n_rep in n_reps[1:]:
+    #             node_pool = torch.cat((node_pool, n_rep), dim=0)
+    #         node_pool = top_k_nodes(node_pool, g_reps, args)
+    # else:
+    #     n_reps = []
+    #     g_reps = []
+    #     for graph in graphs:
+    #         graph.to(args.device)
+    #         _, n_rep, g_rep = model(graph)
+    #         n_reps.append(n_rep.detach())
+    #         g_reps.append(g_rep.detach())
+    #     node_pool = n_reps[0]
+    #     for n_rep in n_reps[1:]:
+    #         node_pool = torch.cat((node_pool, n_rep), dim=0)
+    #     g_reps = torch.stack(g_reps)
+    #     g_reps = g_reps.squeeze()
+    #     node_pool = top_k_nodes(node_pool, g_reps, args)
+    n_reps = []
+    g_reps = []
+    for graph in graphs:
+        graph.to(args.device)
+        _, n_rep, g_rep = model(graph)
+        n_reps.append(n_rep.detach())
+        g_reps.append(g_rep.detach())
+    node_pool = n_reps[0]
+    for n_rep in n_reps[1:]:
+        node_pool = torch.cat((node_pool, n_rep), dim=0)
+    g_reps = torch.stack(g_reps)
+    g_reps = g_reps.squeeze()
+    node_pool = top_k_nodes(node_pool, g_reps, args)
     return node_pool
 
 def top_k_nodes(node_pool, g_reps, args):

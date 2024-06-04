@@ -1,0 +1,39 @@
+# Create the conda environment
+conda create --name gmapadcuda python=3.9
+
+# Activate the conda environment
+conda activate gmapadconda
+
+# Install packages available from conda channels
+conda install numpy pandas matplotlib scipy scikit-learn seaborn jupyterlab tensorflow
+
+# the installation was taking time so split the installation packages
+conda install numpy pandas
+conda install matplotlib scipy scikit-learn
+conda install seaborn tensorflow jupyterlab
+
+# suggested
+conda install scikit-learn-intelex
+# use this to activate in the python code
+from sklearnex import patch_sklearn
+patch_sklearn()
+
+# TAKING A LOT OF TIME: conda install -c conda-forge jupyterlab
+mamba install -c conda-forge nodejs
+mamba install -c conda-forge jupyterlab
+
+# Install the remaining packages using pip (readline didnt work as its an UNIX PACKAGE)
+
+pip install absl-py argon2-cffi argon2-cffi-bindings astunparse attrs backcall beautifulsoup4 bleach cachetools certifi cffi charset-normalizer cycler debugpy decorator defusedxml entrypoints et-xmlfile fastjsonschema fonttools gast google-auth google-auth-oauthlib google-pasta grpcio h5py idna importlib-metadata importlib-resources ipykernel ipython ipython-genutils ipywidgets jedi jinja2 joblib jsonschema jupyter jupyter-client jupyter-console jupyter-core jupyterlab-pygments jupyterlab-widgets keras-preprocessing kiwisolver lxml markdown markupsafe matplotlib-inline mistune nbclient nbconvert nbformat nest-asyncio networkx notebook oauthlib openpyxl opt-einsum packaging pandocfilters parso pexpect pickleshare pillow pkgutil-resolve-name prometheus-client prompt-toolkit protobuf psutil ptyprocess pyasn1 pyasn1-modules pycparser pygments pyparsing pyrsistent python-dateutil pytz pyyaml pyzmq qtconsole qtpy readline requests requests-oauthlib rsa send2trash setuptools six soupsieve tensorboard tensorboard-data-server tensorboard-plugin-wit tensorflow-estimator tensorflow-gpu terminado threadpoolctl tinycss2 torch torch-geometric torch-scatter torch-sparse torchaudio torchvision tornado tqdm traitlets typing-extensions urllib3 wcwidth webencodings werkzeug wheel widgetsnbextension wrapt zipp
+
+
+# Install the remaining packages using pip
+
+pip install absl-py argon2-cffi argon2-cffi-bindings astunparse attrs backcall beautifulsoup4 bleach cachetools certifi cffi charset-normalizer cycler debugpy decorator defusedxml entrypoints et-xmlfile fastjsonschema fonttools gast google-auth google-auth-oauthlib google-pasta grpcio h5py idna importlib-metadata importlib-resources ipykernel ipython ipython-genutils ipywidgets jedi jinja2 joblib jsonschema jupyter jupyter-client jupyter-console jupyter-core jupyterlab-pygments jupyterlab-widgets keras-preprocessing kiwisolver lxml markdown markupsafe matplotlib-inline mistune nbclient nbconvert nbformat nest-asyncio networkx notebook oauthlib openpyxl opt-einsum packaging pandocfilters parso pexpect pickleshare pillow pkgutil-resolve-name prometheus-client prompt-toolkit protobuf psutil ptyprocess pyasn1 pyasn1-modules pycparser pygments pyparsing pyrsistent python-dateutil pytz pyyaml pyzmq qtconsole qtpy requests requests-oauthlib rsa send2trash setuptools six soupsieve tensorboard tensorboard-data-server tensorboard-plugin-wit tensorflow-estimator tensorflow-gpu terminado threadpoolctl tinycss2 torch torch-geometric torch-scatter torch-sparse torchaudio torchvision tornado tqdm traitlets typing-extensions urllib3 wcwidth webencodings werkzeug wheel widgetsnbextension wrapt zipp pyreadline
+
+pip install absl-py argon2-cffi argon2-cffi-bindings astunparse attrs backcall beautifulsoup4 bleach cachetools certifi cffi charset-normalizer cycler debugpy decorator defusedxml entrypoints et-xmlfile fastjsonschema fonttools gast google-auth google-auth-oauthlib google-pasta grpcio h5py idna importlib-metadata importlib-resources ipykernel ipython ipython-genutils ipywidgets jedi jinja2 joblib jsonschema jupyter jupyter-client jupyter-console jupyter-core jupyterlab-pygments jupyterlab-widgets keras-preprocessing kiwisolver lxml markdown markupsafe matplotlib-inline mistune nbclient nbconvert nbformat nest-asyncio networkx notebook oauthlib openpyxl opt-einsum packaging pandocfilters parso pexpect pickleshare pillow pkgutil-resolve-name prometheus-client prompt-toolkit protobuf psutil ptyprocess pyasn1 pyasn1-modules pycparser pygments pyparsing pyrsistent python-dateutil pytz pyyaml pyzmq qtconsole qtpy requests requests-oauthlib rsa send2trash setuptools six soupsieve tensorboard tensorboard-data-server tensorboard-plugin-wit tensorflow-estimator terminado threadpoolctl tinycss2 torch-scatter torch-geometric torch-sparse torchaudio torchvision tornado tqdm traitlets typing-extensions urllib3 wcwidth webencodings werkzeug wheel widgetsnbextension wrapt zipp pyreadline
+
+
+
+# needed to install pip install torch torchvision torchaudio first
+pip install torch torchvision torchaudio

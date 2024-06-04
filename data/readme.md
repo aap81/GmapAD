@@ -1,1 +1,0 @@
-All datasets used in this paper are from previous works and the brain network datasets can be downloaded from [BrainNetDatasets](https://github.com/GRAND-Lab/graph\_datasets) and graph classification datasets can be downloaded from [GraphClsDatasets](https://chrsmrrs.github.io/datasets/).

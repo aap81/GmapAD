@@ -5,16 +5,27 @@ import torch
 import numpy as np
 import sys
 from sklearn import svm
-
-from utils import load_dataset, pos_graphs_pool, print_dataset_stat
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
+from utils import load_dataset, pos_graphs_pool, print_dataset_stat, get_repo_root, log_data, log_time, milliseconds_to_seconds
 from GNN import GmapAD_GCN, GmapAD_GAT, train_gnn
 from evolution import evolution_svm
 import os
 import random
+import logging
+import time
 def warn(*args, **kwargs):
     pass
 import warnings
+
 warnings.warn = warn
+gpu_execution_enabled = False
+
+
+# Get the root directory of the repository
+repo_root = get_repo_root()
+
+# Construct the path to the data directory
+data_root_path = os.path.join(repo_root, 'data')
 
 def arg_parser():
     parser = argparse.ArgumentParser()
@@ -63,45 +74,64 @@ def arg_parser():
     return args
 
 def downsample(ds_rate, ds_cl, graphs):
-    if args.dataset not in ['KKI', 'OHSU']:
-        ds_rate = args.ds_rate
-        ds_cl = args.ds_cl
-        ds_graphs = []
-        all_graphs = []
-        num_nodes = 0
-        for graph in graphs:
-            num_nodes += graph.num_nodes
-            if graph.y == ds_cl:
-                ds_graphs.append(graph)
-            all_graphs.append(graph)
-        ds_graphs = ds_graphs[int(len(ds_graphs)*ds_rate):]
-        [all_graphs.remove(graph) for graph in ds_graphs]
-        return all_graphs
-    else:
-        return graphs
+    ds_rate = args.ds_rate
+    ds_cl = args.ds_cl
+    ds_graphs = []
+    all_graphs = []
+    num_nodes = 0
+    for graph in graphs:
+        num_nodes += graph.num_nodes
+        if graph.y == ds_cl:
+            ds_graphs.append(graph)
+        all_graphs.append(graph)
+    ds_graphs = ds_graphs[int(len(ds_graphs)*ds_rate):]
+    [all_graphs.remove(graph) for graph in ds_graphs]
+    return all_graphs
+    # if args.dataset not in ['KKI', 'OHSU']:
+    #     ds_rate = args.ds_rate
+    #     ds_cl = args.ds_cl
+    #     ds_graphs = []
+    #     all_graphs = []
+    #     num_nodes = 0
+    #     for graph in graphs:
+    #         num_nodes += graph.num_nodes
+    #         if graph.y == ds_cl:
+    #             ds_graphs.append(graph)
+    #         all_graphs.append(graph)
+    #     ds_graphs = ds_graphs[int(len(ds_graphs)*ds_rate):]
+    #     [all_graphs.remove(graph) for graph in ds_graphs]
+    #     return all_graphs
+    # else:
+    #     return graphs
 
 if __name__ == "__main__":
-
+    start_time = time.time()
+    action_start_time = time.time()
     args = arg_parser()
+    log_time(start_time, action_start_time, "Parsed arguments")
     # Check GPU availability
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device_str = 'cpu'
+    if gpu_execution_enabled:
+        device_str = 'cuda' if torch.cuda.is_available() else 'cpu'
+    device = torch.device(device_str)
     args.device = device
-    print(f"Training device: {device}")
-    print(f"loading dataset {args.dataset}")
-    print(f"Testing Round: {args.round}")
+    log_data(f"Training device: {device}")
+    log_data(f"loading dataset {args.dataset}")
+    log_data(f"Testing Round: {args.round}")
 
-    graph_path = f"./data/{args.dataset}/{args.gnn_layer}/graph{args.round}.pt"
-    train_path = f"./data/{args.dataset}/{args.gnn_layer}/train_graph{args.round}.pt"
-    val_path = f"./data/{args.dataset}/{args.gnn_layer}/val_graph{args.round}.pt"
-    test_path = f"./data/{args.dataset}/{args.gnn_layer}/test_graph{args.round}.pt"
-    
+    graph_path = f"{data_root_path}/{args.dataset}/{args.gnn_layer}/graph{args.round}.pt"
+    train_path = f"{data_root_path}/{args.dataset}/{args.gnn_layer}/train_graph{args.round}.pt"
+    val_path = f"{data_root_path}/{args.dataset}/{args.gnn_layer}/val_graph{args.round}.pt"
+    test_path = f"{data_root_path}/{args.dataset}/{args.gnn_layer}/test_graph{args.round}.pt"
+    action_start_time = time.time() # for loading datasets
     if not os.path.exists(graph_path) or not os.path.exists(train_path) or not os.path.exists(val_path) or not os.path.exists(test_path):
         graphs = load_dataset(args.dataset, args)
-        if args.dataset in ['KKI', 'OHSU']:
-            random.shuffle(graphs)
-        else:
-            graphs = graphs.shuffle()
-        torch.save(graphs, f"../data/{args.dataset}/{args.gnn_layer}/graph{args.round}.pt")
+        # if False and args.dataset in ['KKI', 'OHSU']:
+        #     random.shuffle(graphs)
+        # else:
+        #     graphs = graphs.shuffle()
+        graphs = graphs.shuffle()
+        torch.save(graphs, f"{data_root_path}/{args.dataset}/{args.gnn_layer}/graph{args.round}.pt")
         train_ratio = args.train_ratio
         val_ratio = args.test_ratio
         train_graphs = graphs[:int(len(graphs)*train_ratio)]
@@ -114,26 +144,28 @@ if __name__ == "__main__":
         test_graphs = downsample(args.ds_rate, args.ds_cl, test_graphs)
         
         # Save downsampled datasets
-        torch.save(train_graphs, f"./data/{args.dataset}/{args.gnn_layer}/train_graph{args.round}.pt")
-        torch.save(val_graphs, f"./data/{args.dataset}/{args.gnn_layer}/val_graph{args.round}.pt")
-        torch.save(test_graphs, f"./data/{args.dataset}/{args.gnn_layer}/test_graph{args.round}.pt")
+        torch.save(train_graphs, f"{data_root_path}/{args.dataset}/{args.gnn_layer}/train_graph{args.round}.pt")
+        torch.save(val_graphs, f"{data_root_path}/{args.dataset}/{args.gnn_layer}/val_graph{args.round}.pt")
+        torch.save(test_graphs, f"{data_root_path}/{args.dataset}/{args.gnn_layer}/test_graph{args.round}.pt")
     else:
-        print("load from pre-splitted data.")
-        graphs = torch.load(f"./data/{args.dataset}/{args.gnn_layer}/graph{args.round}.pt")
-        train_graphs = torch.load(f"./data/{args.dataset}/{args.gnn_layer}/train_graph{args.round}.pt")
-        val_graphs = torch.load(f"./data/{args.dataset}/{args.gnn_layer}/val_graph{args.round}.pt")
-        test_graphs = torch.load(f"./data/{args.dataset}/{args.gnn_layer}/test_graph{args.round}.pt")
+        log_data("load from pre-splitted data.")
+        graphs = torch.load(f"{data_root_path}/{args.dataset}/{args.gnn_layer}/graph{args.round}.pt")
+        train_graphs = torch.load(f"{data_root_path}/{args.dataset}/{args.gnn_layer}/train_graph{args.round}.pt")
+        val_graphs = torch.load(f"{data_root_path}/{args.dataset}/{args.gnn_layer}/val_graph{args.round}.pt")
+        test_graphs = torch.load(f"{data_root_path}/{args.dataset}/{args.gnn_layer}/test_graph{args.round}.pt")
 
     print_dataset_stat(args, graphs)
-
+    log_time(start_time, action_start_time, "Loaded dataset and Stats")
     if args.gnn_layer == "GCN":
         model = GmapAD_GCN(num_nodes=graphs[0].x.shape[0], input_dim=graphs[0].x.shape[1], hidden_channels=args.gnn_dim, num_classes=2)
     else:
         model = GmapAD_GAT(num_nodes=graphs[0].x.shape[0], input_dim=graphs[0].x.shape[1], hidden_channels=args.gnn_dim, num_classes=2, num_heads=args.gat_heads)
     
     model = model.to(device)
-    print(f"Start training model {args.gnn_layer}")
+    action_start_time = time.time() # training start
+    log_data(f"Start training model {args.gnn_layer}")
     train_gnn(model, train_graphs, val_graphs, test_graphs, args)
+    log_time(start_time, action_start_time, "Completed model training")
 
     # Get the candidate pool, grpah reprsentations
     pos_graphs = []
@@ -147,10 +179,25 @@ if __name__ == "__main__":
 
     node_pool = pos_graphs_pool(pos_graphs, model, args)
     node_pool = node_pool.cpu()
-    print(f"Generating Node pool size: {node_pool.size()}")
+    log_data(f"Generating Node pool size: {node_pool.size()}")
 
     if args.clf == "svm":
+        action_start_time = time.time() # Starting SVM evaluation
         clf = svm.SVC(kernel='linear', C=1.0, cache_size=1000)
-        print(f"Test on {args.dataset}, using SVM, graph pool is {args.n_p_g}, node pool stg is {args.n_p_stg}")
+        log_data(f"Test on {args.dataset}, using SVM, graph pool is {args.n_p_g}, node pool stg is {args.n_p_stg}")
+        log_data(f"Test graph lenght: {len(test_graphs)}")
         clf, x_train_pred, Y_train, x_val_pred, Y_val, x_test_pred, Y_test = evolution_svm(clf, model, node_pool, args, train_graphs, val_graphs, test_graphs)
- 
+        log_time(start_time, action_start_time, "Completed SVM evaluation")
+        # Compute metrics
+        accuracy = accuracy_score(Y_test, x_test_pred)
+        precision = precision_score(Y_test, x_test_pred)
+        recall = recall_score(Y_test, x_test_pred)
+        f1 = f1_score(Y_test, x_test_pred)
+        cm = confusion_matrix(Y_test, x_test_pred)
+        
+        log_data(f"Accuracy: {accuracy}")
+        log_data(f"Precision: {precision}")
+        log_data(f"Recall: {recall}")
+        log_data(f"F1 Score: {f1}")
+        log_data("Confusion Matrix:")
+        log_data(cm)
