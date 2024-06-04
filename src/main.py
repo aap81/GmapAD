@@ -18,7 +18,7 @@ def warn(*args, **kwargs):
 import warnings
 
 warnings.warn = warn
-gpu_execution_enabled = False
+gpu_execution_enabled = True
 
 
 # Get the root directory of the repository
