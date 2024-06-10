@@ -5,8 +5,9 @@ import logging
 import time
 
 # Define the datasets and GNN layers to test
-datasets = ['IMDB-BINARY']
+datasets = ['KKI', 'OHSU', 'PROTEINS', 'AIDS']
 gnn_layers = ['GCN', 'GAT']
+inter_graph_methods = ['graph2vec', 'diff2vec']
 
 # Ensure the required directories exist
 def ensure_directories(dataset, gnn_layer):
@@ -21,17 +22,19 @@ def run_experiments():
     for dataset in datasets:
         for gnn_layer in gnn_layers:
             if experiment_counter > 0:
-                log_data("Waiting for 1 minute before the next experiment...")
-                time.sleep(60)
+                log_data("Waiting for 15 seconds before the next experiment...")
+                time.sleep(15)
 
-            log_data(f"[Experiment {experiment_counter + 1} - Dataset: {dataset}, Layer type: {gnn_layer}]")
+            experiment_name = f"[Experiment {experiment_counter + 1} - Dataset: {dataset}, Layer type: {gnn_layer}, Method: diff2vec]"
+            log_data(experiment_name)
             ensure_directories(dataset, gnn_layer)
             
             # Construct the command to run main.py
             command = [
                 'python', 'src/main.py',
                 '--dataset', dataset,
-                '--gnn_layer', gnn_layer
+                '--gnn_layer', gnn_layer,
+                '--inter_graph_method', 'diff2vec',
             ]
             
             log_data(f"Running command: {' '.join(command)}")
@@ -44,7 +47,37 @@ def run_experiments():
             if result.stderr:
                 log_data(f"Error: {result.stderr}")
 
-            log_data(f"[End of Experiment {experiment_counter + 1} - Dataset: {dataset}, Layer type: {gnn_layer}]")
+            log_data(f"[End of {experiment_name}]")
+            experiment_counter += 1
+    for dataset in datasets:
+        for gnn_layer in gnn_layers:
+            if experiment_counter > 0:
+                log_data("Waiting for 15 seconds before the next experiment...")
+                time.sleep(15)
+
+            experiment_name = f"[Experiment {experiment_counter + 1} - Dataset: {dataset}, Layer type: {gnn_layer}, Method: graph2vec]"
+            log_data(experiment_name)
+            ensure_directories(dataset, gnn_layer)
+            
+            # Construct the command to run main.py
+            command = [
+                'python', 'src/main.py',
+                '--dataset', dataset,
+                '--gnn_layer', gnn_layer,
+                '--inter_graph_method', 'graph2vec',
+            ]
+            
+            log_data(f"Running command: {' '.join(command)}")
+            
+            # Run the command
+            result = subprocess.run(command, capture_output=True, text=True)
+            
+            # log_data the output and errors
+            log_data(result.stdout)
+            if result.stderr:
+                log_data(f"Error: {result.stderr}")
+
+            log_data(f"[End of {experiment_name}]")
             experiment_counter += 1
 
 if __name__ == "__main__":
