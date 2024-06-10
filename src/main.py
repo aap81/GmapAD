@@ -61,6 +61,7 @@ def main():
 
     print_dataset_stat(args, graphs)
     log_time(start_time, action_start_time, "Loaded dataset and Stats")
+    action_start_time = time.time()  # training start
 
     if args.gnn_layer == "GCN":
         model = GmapAD_GCN(num_nodes=graphs[0].x.shape[0], input_dim=graphs[0].x.shape[1], hidden_channels=args.gnn_dim, num_classes=2)
@@ -68,7 +69,6 @@ def main():
         model = GmapAD_GAT(num_nodes=graphs[0].x.shape[0], input_dim=graphs[0].x.shape[1], hidden_channels=args.gnn_dim, num_classes=2, num_heads=args.gat_heads)
     
     model = model.to(device)
-    action_start_time = time.time()  # training start
     log_data(f"Start training model {args.gnn_layer}")
     train_gnn(model, train_graphs, val_graphs, test_graphs, args)
     log_time(start_time, action_start_time, "Completed model training")
@@ -89,11 +89,14 @@ def main():
 
     # Select inter-graph analysis method
     if args.inter_graph_method == "evolution":
+        action_start_time = time.time()  # training start
         clf = svm.SVC(kernel='linear', C=1.0, cache_size=1000)
         log_data(f"Test on {args.dataset}, using Evolution SVM, graph pool is {args.n_p_g}, node pool stg is {args.n_p_stg}")
         log_data(f"Test graph length: {len(test_graphs)}")
         clf, x_train_pred, Y_train, x_val_pred, Y_val, x_test_pred, Y_test = evolution_svm(clf, model, node_pool, args, train_graphs, val_graphs, test_graphs)
+        log_time(start_time, action_start_time, "Completed SVM evaluation")
     elif args.inter_graph_method == "graph2vec":
+        action_start_time = time.time()  # training start
         input_dim = graphs[0].x.shape[1]
         graph_embeddings = generate_graph2vec_embeddings(graphs, model, device)
         train_size = len(train_graphs)
@@ -113,7 +116,9 @@ def main():
         clf = svm.SVC(kernel='linear', C=1.0, cache_size=1000)
         clf.fit(X_train, Y_train)
         x_test_pred = clf.predict(X_test)
+        log_time(start_time, action_start_time, "Completed graph2vec evaluation")
     elif args.inter_graph_method == "diff2vec":
+        action_start_time = time.time()  # training start
         input_dim = graphs[0].x.shape[1]
         graph_embeddings = generate_diff2vec_embeddings(graphs, model, device)
         train_size = len(train_graphs)
@@ -133,15 +138,18 @@ def main():
         clf = svm.SVC(kernel='linear', C=1.0, cache_size=1000)
         clf.fit(X_train, Y_train)
         x_test_pred = clf.predict(X_test)
+        log_time(start_time, action_start_time, "Completed diff2vec evaluation")
     elif args.inter_graph_method == "siamese":
+        action_start_time = time.time()  # training start
         siamese_model = SiameseGNN(input_dim=graphs[0].x.shape[1], hidden_dim=args.gnn_dim, output_dim=1, gnn_type=args.gnn_layer)
         siamese_model = siamese_model.to(device)
         criterion = nn.BCELoss()
         optimizer = torch.optim.Adam(siamese_model.parameters(), lr=args.learning_rate)
         siamese_data = prepare_siamese_data(train_graphs, model)
-        log_data(f"Siamese data prepared: {len(siamese_data)} pairs")
+        logging.info(f"Siamese data prepared: {len(siamese_data)} pairs")
         train_siamese_gnn(siamese_model, siamese_data, optimizer, criterion, device)
         x_test_pred, Y_test = evaluate_siamese_gnn(siamese_model, test_graphs, device)
+        log_time(start_time, action_start_time, "Completed siamese evaluation")
 
     # Compute and log metrics for the selected method
     accuracy = accuracy_score(Y_test, x_test_pred)

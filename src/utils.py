@@ -82,8 +82,6 @@ def arg_parser():
     return args
 
 def downsample(ds_rate, ds_cl, graphs):
-    ds_rate = args.ds_rate
-    ds_cl = args.ds_cl
     ds_graphs = []
     all_graphs = []
     num_nodes = 0
