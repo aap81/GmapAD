@@ -1,124 +1,27 @@
-import argparse
-from torch_geometric.data import Data
-from torch_geometric.utils import to_scipy_sparse_matrix
 import torch
+import torch.nn as nn
 import numpy as np
-import sys
 from sklearn import svm
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
-from utils import load_dataset, pos_graphs_pool, print_dataset_stat, get_repo_root, log_data, log_time, milliseconds_to_seconds
+from utils import load_dataset, pos_graphs_pool, print_dataset_stat, get_repo_root, log_data, log_time, arg_parser, downsample, ensure_directories
 from GNN import GmapAD_GCN, GmapAD_GAT, train_gnn
 from evolution import evolution_svm
+from graph2vec import generate_graph2vec_embeddings
+from diff2vec import generate_diff2vec_embeddings
+from siamese_gnn import SiameseGNN, train_siamese_gnn, evaluate_siamese_gnn, prepare_siamese_data
 import os
-import random
-import logging
 import time
-def warn(*args, **kwargs):
-    pass
-import warnings
 
-warnings.warn = warn
-gpu_execution_enabled = True
-
-
-# Get the root directory of the repository
-repo_root = get_repo_root()
-
-# Construct the path to the data directory
-data_root_path = os.path.join(repo_root, 'data')
-
-def arg_parser():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--seed', type=int, default=7, help='Random seed.')
-    parser.add_argument('--dataset', type=str, default='OHSU', help="['KKI', 'OHSU', 'MUTAG', 'Mutangenicity', 'PROTEINS', 'AIDS', 'NCI1', 'IMDB-BINARY', 'REDDIT-BINARY')")
-    parser.add_argument('--ds_rate', type=float, default=0.1, help='Dataset downsampling rate for Graph classification datasets.')
-    parser.add_argument('--ds_cl', type=int, default=0, help='The default downsampled class.')
-
-    # GNN related parameters
-    parser.add_argument('--gnn_layer', type=str, default='GCN', help="['GCN','GAT']")
-    parser.add_argument('--epochs', type=int, default=200, help='Number of epochs to train.')
-    parser.add_argument('--learning_rate', default=0.005, help='Learning rate of the optimiser.')
-    parser.add_argument('--weight_decay', default=5e-4, help='Weight decay of the optimiser.')
-    parser.add_argument('--train_ratio', type=float, default=0.8)
-    parser.add_argument('--test_ratio', type=float, default=0.1)
-    parser.add_argument('--tol', type=int, default=300)
-    parser.add_argument('--early_stop', type=bool, default=True, help="Early stop when training GNN")
-
-    # Node pooling related parameters
-    parser.add_argument('--n_p_g', type=str, default='positive', help="['positive', 'negative']")
-    parser.add_argument('--n_p_stg', type=str, default='mean', help="['mean','max', 'min']")
-    
-    # Evolving related parameters
-    parser.add_argument('--w_stg', type=str, default='one-hot', help="['one-hot']")
-    parser.add_argument('--clf', type=str, default='svm', help="['svm', 'others']")
-    parser.add_argument('--mut_rate', type=float, default=0.5, help="['svm','nb', 'others']")
-    parser.add_argument('--cros_rate', type=float, default=0.9, help="['svm','nb', 'others']")
-    parser.add_argument('--evo_gen', type=int, default=2000, help="number of evolution generations")
-    parser.add_argument('--cand_size', type=int, default=30, help="candidates in each generation")
-
-    # Model hyperparameters
-    parser.add_argument('--gnn_dim', type=int, default=128)
-    parser.add_argument('--fcn_dim', type=int, default=32)
-    parser.add_argument('--gce_q', default=0.7, help='gce q')
-    parser.add_argument('--alpha', type=float, default=1.5)
-    parser.add_argument('--beta', type=float, default=0.5)
-    parser.add_argument('--topk', type=int, default=64, help="number of the most informative nodes, this parameter also decides the finally graph embedding dimension.")
-
-    # For GAT only, num of attention heads
-    parser.add_argument('--gat_heads', default=8, help='GAT heads')
-
-    # Test round
-    parser.add_argument('--round', type=int, default=1, help='test round')
-
-    args = parser.parse_args()
-    return args
-
-def downsample(ds_rate, ds_cl, graphs):
-    ds_rate = args.ds_rate
-    ds_cl = args.ds_cl
-    ds_graphs = []
-    all_graphs = []
-    num_nodes = 0
-    for graph in graphs:
-        num_nodes += graph.num_nodes
-        if graph.y == ds_cl:
-            ds_graphs.append(graph)
-        all_graphs.append(graph)
-    ds_graphs = ds_graphs[int(len(ds_graphs)*ds_rate):]
-    [all_graphs.remove(graph) for graph in ds_graphs]
-    return all_graphs
-    # if args.dataset not in ['KKI', 'OHSU']:
-    #     ds_rate = args.ds_rate
-    #     ds_cl = args.ds_cl
-    #     ds_graphs = []
-    #     all_graphs = []
-    #     num_nodes = 0
-    #     for graph in graphs:
-    #         num_nodes += graph.num_nodes
-    #         if graph.y == ds_cl:
-    #             ds_graphs.append(graph)
-    #         all_graphs.append(graph)
-    #     ds_graphs = ds_graphs[int(len(ds_graphs)*ds_rate):]
-    #     [all_graphs.remove(graph) for graph in ds_graphs]
-    #     return all_graphs
-    # else:
-    #     return graphs
-
-def ensure_directories(dataset, gnn_layer):
-    repo_root = get_repo_root()
-    data_dir = os.path.join(repo_root, 'data', dataset, gnn_layer)
-    os.makedirs(data_dir, exist_ok=True)
-    log_data(f"Ensured directory exists: {data_dir}")
-
-if __name__ == "__main__":
+def main():
     start_time = time.time()
     action_start_time = time.time()
     args = arg_parser()
     log_time(start_time, action_start_time, "Parsed arguments")
+
     # Check GPU availability
     device_str = 'cpu'
-    if gpu_execution_enabled:
-        device_str = 'cuda' if torch.cuda.is_available() else 'cpu'
+    if torch.cuda.is_available():
+        device_str = 'cuda'
     device = torch.device(device_str)
     args.device = device
     ensure_directories(args.dataset, args.gnn_layer)
@@ -126,85 +29,133 @@ if __name__ == "__main__":
     log_data(f"loading dataset {args.dataset}")
     log_data(f"Testing Round: {args.round}")
 
+    # Load or generate dataset
+    data_root_path = os.path.join(get_repo_root(), 'data')
     graph_path = f"{data_root_path}/{args.dataset}/{args.gnn_layer}/graph{args.round}.pt"
     train_path = f"{data_root_path}/{args.dataset}/{args.gnn_layer}/train_graph{args.round}.pt"
     val_path = f"{data_root_path}/{args.dataset}/{args.gnn_layer}/val_graph{args.round}.pt"
     test_path = f"{data_root_path}/{args.dataset}/{args.gnn_layer}/test_graph{args.round}.pt"
-    action_start_time = time.time() # for loading datasets
+    
     if not os.path.exists(graph_path) or not os.path.exists(train_path) or not os.path.exists(val_path) or not os.path.exists(test_path):
         graphs = load_dataset(args.dataset, args)
-        # if False and args.dataset in ['KKI', 'OHSU']:
-        #     random.shuffle(graphs)
-        # else:
-        #     graphs = graphs.shuffle()
         graphs = graphs.shuffle()
-        torch.save(graphs, f"{data_root_path}/{args.dataset}/{args.gnn_layer}/graph{args.round}.pt")
+        torch.save(graphs, graph_path)
         train_ratio = args.train_ratio
         val_ratio = args.test_ratio
-        train_graphs = graphs[:int(len(graphs)*train_ratio)]
-        val_graphs = graphs[int(len(graphs)*train_ratio): int(len(graphs)*(train_ratio+val_ratio))]
-        test_graphs = graphs[int(len(graphs)*(train_ratio+val_ratio)):]
-
-        # Downsampling
+        test_ratio = 1 - train_ratio - val_ratio
+        train_graphs = graphs[:int(len(graphs) * train_ratio)]
+        val_graphs = graphs[int(len(graphs) * train_ratio): int(len(graphs) * (train_ratio + val_ratio))]
+        test_graphs = graphs[int(len(graphs) * (train_ratio + val_ratio)):]
         train_graphs = downsample(args.ds_rate, args.ds_cl, train_graphs)
         val_graphs = downsample(args.ds_rate, args.ds_cl, val_graphs)
         test_graphs = downsample(args.ds_rate, args.ds_cl, test_graphs)
-        
-        # Save downsampled datasets
-        torch.save(train_graphs, f"{data_root_path}/{args.dataset}/{args.gnn_layer}/train_graph{args.round}.pt")
-        torch.save(val_graphs, f"{data_root_path}/{args.dataset}/{args.gnn_layer}/val_graph{args.round}.pt")
-        torch.save(test_graphs, f"{data_root_path}/{args.dataset}/{args.gnn_layer}/test_graph{args.round}.pt")
+        torch.save(train_graphs, train_path)
+        torch.save(val_graphs, val_path)
+        torch.save(test_graphs, test_path)
     else:
-        log_data("load from pre-splitted data.")
-        graphs = torch.load(f"{data_root_path}/{args.dataset}/{args.gnn_layer}/graph{args.round}.pt")
-        train_graphs = torch.load(f"{data_root_path}/{args.dataset}/{args.gnn_layer}/train_graph{args.round}.pt")
-        val_graphs = torch.load(f"{data_root_path}/{args.dataset}/{args.gnn_layer}/val_graph{args.round}.pt")
-        test_graphs = torch.load(f"{data_root_path}/{args.dataset}/{args.gnn_layer}/test_graph{args.round}.pt")
+        log_data("Load from pre-splitted data.")
+        graphs = torch.load(graph_path)
+        train_graphs = torch.load(train_path)
+        val_graphs = torch.load(val_path)
+        test_graphs = torch.load(test_path)
 
     print_dataset_stat(args, graphs)
     log_time(start_time, action_start_time, "Loaded dataset and Stats")
+
     if args.gnn_layer == "GCN":
         model = GmapAD_GCN(num_nodes=graphs[0].x.shape[0], input_dim=graphs[0].x.shape[1], hidden_channels=args.gnn_dim, num_classes=2)
     else:
         model = GmapAD_GAT(num_nodes=graphs[0].x.shape[0], input_dim=graphs[0].x.shape[1], hidden_channels=args.gnn_dim, num_classes=2, num_heads=args.gat_heads)
     
     model = model.to(device)
-    action_start_time = time.time() # training start
+    action_start_time = time.time()  # training start
     log_data(f"Start training model {args.gnn_layer}")
     train_gnn(model, train_graphs, val_graphs, test_graphs, args)
     log_time(start_time, action_start_time, "Completed model training")
 
-    # Get the candidate pool, grpah reprsentations
-    pos_graphs = []
-    neg_graphs = []
+    # Generate Node Pool for Evolution SVM
+    if args.inter_graph_method == "evolution":
+        pos_graphs = [graph for graph in train_graphs if graph.y == 1]
+        node_pool = pos_graphs_pool(pos_graphs, model, args)
+        node_pool = node_pool.cpu()
+        log_data(f"Generating Node pool size: {node_pool.size()}")
 
-    for graph in train_graphs:
-        if graph.y == 1:
-            pos_graphs.append(graph)
-        else:
-            neg_graphs.append(graph)
+    # Convert labels to CPU and NumPy arrays
+    Y_train = np.array([graph.y.cpu().numpy() for graph in train_graphs])
+    Y_val = np.array([graph.y.cpu().numpy() for graph in val_graphs])
+    Y_test = np.array([graph.y.cpu().numpy() for graph in test_graphs])
 
-    node_pool = pos_graphs_pool(pos_graphs, model, args)
-    node_pool = node_pool.cpu()
-    log_data(f"Generating Node pool size: {node_pool.size()}")
+    log_data(f"Y_train length: {len(Y_train)}, Y_val length: {len(Y_val)}, Y_test length: {len(Y_test)}")
 
-    if args.clf == "svm":
-        action_start_time = time.time() # Starting SVM evaluation
+    # Select inter-graph analysis method
+    if args.inter_graph_method == "evolution":
         clf = svm.SVC(kernel='linear', C=1.0, cache_size=1000)
-        log_data(f"Test on {args.dataset}, using SVM, graph pool is {args.n_p_g}, node pool stg is {args.n_p_stg}")
-        log_data(f"Test graph lenght: {len(test_graphs)}")
+        log_data(f"Test on {args.dataset}, using Evolution SVM, graph pool is {args.n_p_g}, node pool stg is {args.n_p_stg}")
+        log_data(f"Test graph length: {len(test_graphs)}")
         clf, x_train_pred, Y_train, x_val_pred, Y_val, x_test_pred, Y_test = evolution_svm(clf, model, node_pool, args, train_graphs, val_graphs, test_graphs)
-        log_time(start_time, action_start_time, "Completed SVM evaluation")
-        # Compute metrics
-        accuracy = accuracy_score(Y_test, x_test_pred)
-        precision = precision_score(Y_test, x_test_pred)
-        recall = recall_score(Y_test, x_test_pred)
-        f1 = f1_score(Y_test, x_test_pred)
-        cm = confusion_matrix(Y_test, x_test_pred)
+    elif args.inter_graph_method == "graph2vec":
+        input_dim = graphs[0].x.shape[1]
+        graph_embeddings = generate_graph2vec_embeddings(graphs, model, device)
+        train_size = len(train_graphs)
+        val_size = len(val_graphs)
+        test_size = len(test_graphs)
+
+        # Align graph embeddings with splits
+        X_train = graph_embeddings[:train_size]
+        X_val = graph_embeddings[train_size:train_size + val_size]
+        X_test = graph_embeddings[train_size + val_size:train_size + val_size + test_size]
         
-        log_data(f"Accuracy: {accuracy}")
-        log_data(f"Precision: {precision}")
-        log_data(f"Recall: {recall}")
-        log_data(f"F1 Score: {f1}")
-        log_data("Confusion Matrix:")
-        log_data(cm)
+        log_data(f"X_train length: {len(X_train)}, X_val length: {len(X_val)}, X_test length: {len(X_test)}")
+        assert len(X_train) == len(Y_train), f"Length mismatch: X_train={len(X_train)}, Y_train={len(Y_train)}"
+        assert len(X_val) == len(Y_val), f"Length mismatch: X_val={len(X_val)}, Y_val={len(Y_val)}"
+        assert len(X_test) == len(Y_test), f"Length mismatch: X_test={len(X_test)}, Y_test={len(Y_test)}"
+        
+        clf = svm.SVC(kernel='linear', C=1.0, cache_size=1000)
+        clf.fit(X_train, Y_train)
+        x_test_pred = clf.predict(X_test)
+    elif args.inter_graph_method == "diff2vec":
+        input_dim = graphs[0].x.shape[1]
+        graph_embeddings = generate_diff2vec_embeddings(graphs, model, device)
+        train_size = len(train_graphs)
+        val_size = len(val_graphs)
+        test_size = len(test_graphs)
+
+        # Align graph embeddings with splits
+        X_train = graph_embeddings[:train_size]
+        X_val = graph_embeddings[train_size:train_size + val_size]
+        X_test = graph_embeddings[train_size + val_size:train_size + val_size + test_size]
+
+        log_data(f"X_train length: {len(X_train)}, X_val length: {len(X_val)}, X_test length: {len(X_test)}")
+        assert len(X_train) == len(Y_train), f"Length mismatch: X_train={len(X_train)}, Y_train={len(Y_train)}"
+        assert len(X_val) == len(Y_val), f"Length mismatch: X_val={len(X_val)}, Y_val={len(Y_val)}"
+        assert len(X_test) == len(Y_test), f"Length mismatch: X_test={len(X_test)}, Y_test={len(Y_test)}"
+
+        clf = svm.SVC(kernel='linear', C=1.0, cache_size=1000)
+        clf.fit(X_train, Y_train)
+        x_test_pred = clf.predict(X_test)
+    elif args.inter_graph_method == "siamese":
+        siamese_model = SiameseGNN(input_dim=graphs[0].x.shape[1], hidden_dim=args.gnn_dim, output_dim=1, gnn_type=args.gnn_layer)
+        siamese_model = siamese_model.to(device)
+        criterion = nn.BCELoss()
+        optimizer = torch.optim.Adam(siamese_model.parameters(), lr=args.learning_rate)
+        siamese_data = prepare_siamese_data(train_graphs, model)
+        log_data(f"Siamese data prepared: {len(siamese_data)} pairs")
+        train_siamese_gnn(siamese_model, siamese_data, optimizer, criterion, device)
+        x_test_pred, Y_test = evaluate_siamese_gnn(siamese_model, test_graphs, device)
+
+    # Compute and log metrics for the selected method
+    accuracy = accuracy_score(Y_test, x_test_pred)
+    precision = precision_score(Y_test, x_test_pred)
+    recall = recall_score(Y_test, x_test_pred)
+    f1 = f1_score(Y_test, x_test_pred)
+    cm = confusion_matrix(Y_test, x_test_pred)
+    
+    log_data(f"Accuracy: {accuracy}")
+    log_data(f"Precision: {precision}")
+    log_data(f"Recall: {recall}")
+    log_data(f"F1 Score: {f1}")
+    log_data("Confusion Matrix:")
+    log_data(cm)
+
+if __name__ == "__main__":
+    main()

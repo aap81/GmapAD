@@ -217,3 +217,143 @@ GCN train - 1476137.59 ms (1476.14 seconds)
 Test graph lenght: 222
 
 SVN evaluation - didnt finish even after 14 hours 51 minutes
+
+
+
+refactored:
+KKI
+GCN
+Training Time: 16067.37 ms (16.07 seconds)
+SVM Evaluation Time: 4901.00 ms (4.90 seconds)
+Metrics:
+Accuracy: 0.8
+Precision: 1.0
+Recall: 0.8
+F1 Score: 0.8888888888888888
+Confusion Matrix:
+lua
+Copy code
+[[0 0]
+ [1 4]]
+GAT
+Training Time: 24725.20 ms (24.73 seconds)
+SVM Evaluation Time: 6450.67 ms (6.45 seconds)
+Metrics:
+Accuracy: 1.0
+Precision: 1.0
+Recall: 1.0
+F1 Score: 1.0
+Confusion Matrix:
+lua
+Copy code
+[[5]]
+OHSU
+GCN
+Training Time: 14651.84 ms (14.65 seconds)
+SVM Evaluation Time: 8618.93 ms (8.62 seconds)
+Metrics:
+Accuracy: 1.0
+Precision: 1.0
+Recall: 1.0
+F1 Score: 1.0
+Confusion Matrix:
+lua
+Copy code
+[[5]]
+GAT
+Training Time: 22647.47 ms (22.65 seconds)
+SVM Evaluation Time: 6595.00 ms (6.60 seconds)
+Metrics:
+Accuracy: 0.8
+Precision: 1.0
+Recall: 0.8
+F1 Score: 0.8888888888888888
+Confusion Matrix:
+lua
+Copy code
+[[0 0]
+ [1 4]]
+MUTAG
+GCN
+Training Time: 38503.57 ms (38.50 seconds)
+SVM Evaluation Time: 5505.00 ms (5.50 seconds)
+Metrics:
+Accuracy: 1.0
+Precision: 1.0
+Recall: 1.0
+F1 Score: 1.0
+Confusion Matrix:
+lua
+Copy code
+[[12]]
+GAT
+Training Time: 57994.66 ms (57.99 seconds)
+SVM Evaluation Time: 305835.05 ms (305.84 seconds)
+Metrics:
+Accuracy: 0.9333333333333333
+Precision: 1.0
+Recall: 0.9333333333333333
+F1 Score: 0.9655172413793104
+Confusion Matrix:
+lua
+Copy code
+[[ 0  0]
+ [ 1 14]]
+PROTEINS
+GCN
+Training Time: 140066.82 ms (140.07 seconds)
+SVM Evaluation Time: 379412.03 ms (379.41 seconds)
+Metrics:
+Accuracy: 0.8571428571428571
+Precision: 0.8571428571428571
+Recall: 1.0
+F1 Score: 0.9230769230769231
+Confusion Matrix:
+lua
+Copy code
+[[ 0  7]
+ [ 0 42]]
+GAT
+Training Time: 227276.24 ms (227.28 seconds)
+SVM Evaluation Time: 4871127.14 ms (4871.13 seconds)
+Metrics:
+Accuracy: 0.851063829787234
+Precision: 0.851063829787234
+Recall: 1.0
+F1 Score: 0.9195402298850575
+Confusion Matrix:
+lua
+Copy code
+[[ 0  7]
+ [ 0 40]]
+AIDS
+GCN
+Training Time: 436114.86 ms (436.11 seconds)
+SVM Evaluation Time: 462154.95 ms (462.15 seconds)
+Metrics:
+Accuracy: 0.9819277108433735
+Precision: 0.9819277108433735
+Recall: 1.0
+F1 Score: 0.9908814589665653
+Confusion Matrix:
+lua
+Copy code
+[[  0   3]
+ [  0 163]]
+GAT
+Training Time: 720611.65 ms (720.61 seconds)
+SVM Evaluation Time: 5185395.60 ms (5185.40 seconds)
+Metrics:
+Accuracy: 0.9823529411764705
+Precision: 0.9823529411764705
+Recall: 1.0
+F1 Score: 0.9910979228486647
+Confusion Matrix:
+lua
+Copy code
+[[  0   3]
+ [  0 167]]
+Mutagenicity
+GCN
+Training Time: 1476137.59 ms (1476.14 seconds)
+SVM Evaluation: Did not finish even after 14 hours 51 minutes

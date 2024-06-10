@@ -1,15 +1,12 @@
-from torch_geometric.data import Data
-from torch_geometric.utils import to_scipy_sparse_matrix, degree
-import torch
-import torch.nn.functional as F
-from torch_geometric.datasets import TUDataset
-import numpy as np
 import os
 import time
 import logging
+import argparse
+import torch
+from torch_geometric.datasets import TUDataset
+import torch.nn.functional as F
 
 logging.basicConfig(filename='script_log.log', level=logging.INFO, format='\nSTRT- %(message)s')
-
 
 def get_repo_root():
     current_dir = os.path.abspath(os.path.dirname(__file__))
@@ -24,13 +21,10 @@ def milliseconds_to_seconds(milliseconds):
     seconds = milliseconds / 1000
     return f"{seconds:.2f} seconds"
 
-# replace all log_data and log_data commands to log_data and log at the same time
 def log_data(text):
     print(text)
     logging.info(text)
 
-# log time with a start time and message
-# elapsed time with respect to start time
 def log_time(start_time, action_start_time, message):
     current_time = time.time()
     elapsed_time_since_start = (current_time - start_time) * 1000  # Convert to milliseconds
@@ -38,202 +32,100 @@ def log_time(start_time, action_start_time, message):
     current_time_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
     log_data(f"[TIMER: {current_time_str} | {message} | Time_taken_since_start: {elapsed_time_since_start:.2f} ms ({milliseconds_to_seconds(elapsed_time_since_start)}) | Time_taken_since_last: {elapsed_time_since_last:.2f} ms ({milliseconds_to_seconds(elapsed_time_since_last)})]")
 
+def arg_parser():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--seed', type=int, default=7, help='Random seed.')
+    parser.add_argument('--dataset', type=str, default='OHSU', help="['KKI', 'OHSU', 'MUTAG', 'Mutagenicity', 'PROTEINS', 'AIDS', 'NCI1', 'IMDB-BINARY', 'REDDIT-BINARY')")
+    parser.add_argument('--ds_rate', type=float, default=0.1, help='Dataset downsampling rate for Graph classification datasets.')
+    parser.add_argument('--ds_cl', type=int, default=0, help='The default downsampled class.')
 
-def gen_graphs(records):
-    node_name = []
-    ## Get all node names and assign a global ID to each node
-    for i in range(len(records)):
-        if records[i] != "\n":
-            if 'n' in records[i]:
-                n_name = records[i].split(' ')[2].strip('\n')
-                if n_name not in node_name:
-                    node_name.append(n_name)
+    # GNN related parameters
+    parser.add_argument('--gnn_layer', type=str, default='GCN', help="['GCN','GAT']")
+    parser.add_argument('--epochs', type=int, default=200, help='Number of epochs to train.')
+    parser.add_argument('--learning_rate', default=0.005, help='Learning rate of the optimiser.')
+    parser.add_argument('--weight_decay', default=5e-4, help='Weight decay of the optimiser.')
+    parser.add_argument('--train_ratio', type=float, default=0.8)
+    parser.add_argument('--test_ratio', type=float, default=0.1)
+    parser.add_argument('--tol', type=int, default=300)
+    parser.add_argument('--early_stop', type=bool, default=True, help="Early stop when training GNN")
 
-    node_index = dict()
-    for g_id, name in enumerate(node_name):
-        node_index.update({
-            name : g_id })
+    # Node pooling related parameters
+    parser.add_argument('--n_p_g', type=str, default='positive', help="['positive', 'negative']")
+    parser.add_argument('--n_p_stg', type=str, default='mean', help="['mean','max', 'min']")
+    
+    # Evolving related parameters
+    parser.add_argument('--w_stg', type=str, default='one-hot', help="['one-hot']")
+    parser.add_argument('--clf', type=str, default='svm', help="['svm', 'others']")
+    parser.add_argument('--mut_rate', type=float, default=0.5, help="['svm','nb', 'others']")
+    parser.add_argument('--cros_rate', type=float, default=0.9, help="['svm','nb', 'others']")
+    parser.add_argument('--evo_gen', type=int, default=2000, help="number of evolution generations")
+    parser.add_argument('--cand_size', type=int, default=30, help="candidates in each generation")
 
-    graph_names = []
-    graphs = dict()
-    graph = dict()
-    nodes = dict()
-    edges = dict()
-    graph_num = 1
-    edge_id = 1
+    # Model hyperparameters
+    parser.add_argument('--gnn_dim', type=int, default=128)
+    parser.add_argument('--fcn_dim', type=int, default=32)
+    parser.add_argument('--gce_q', default=0.7, help='gce q')
+    parser.add_argument('--alpha', type=float, default=1.5)
+    parser.add_argument('--beta', type=float, default=0.5)
+    parser.add_argument('--topk', type=int, default=64, help="number of the most informative nodes, this parameter also decides the finally graph embedding dimension.")
 
-    for i in range(len(records)):
-        if records[i] != "\n":
-            indicator = records[i].split(' ')[0].strip('\n')
-            
-            # Graph ID
-            if 'g' == indicator:
-                graph_name = records[i].split(' ')[2].strip('\n')
-                graph_names.append(graph_name)
-            
-            # Node name and ID
-            if 'n' == indicator:
-                node_id_local = records[i].split(' ')[1].strip('\n')
-                n_name = records[i].split(' ')[2].strip('\n')
-                nodes.update({
-                        node_id_local : n_name
-                    })
-            
-            if 'e' == indicator:
-                st_node_id_local = records[i].split(' ')[1].strip('\n')
-                ed_node_id_local = records[i].split(' ')[2].strip('\n')
-                w = records[i].split(' ')[3].strip('\n')
-                edge = [st_node_id_local, ed_node_id_local, w]
-                edges.update({
-                    edge_id : edge
-                })
-                edge_id = edge_id + 1
-            
-            if 'x' == indicator:
-                label = records[i].split(' ')[1].strip('\n')
-                if label == '1':
-                    g_label = 1
-                else:
-                    g_label = 0
-        else:
-            graph.update({
-                "nodes" : nodes,
-                "edges" : edges,
-                "label" : g_label
-            })
-            graphs.update({
-                graph_name : graph
-            })
-            graph = dict()
-            nodes = dict()
-            edges = dict()
-            edge_id = 0
-            graph_num = graph_num + 1
+    # For GAT only, num of attention heads
+    parser.add_argument('--gat_heads', default=8, help='GAT heads')
 
-    return graphs, node_index
+    # Test round
+    parser.add_argument('--round', type=int, default=1, help='test round')
+
+    # Inter-Graph Analysis Method
+    parser.add_argument('--inter_graph_method', type=str, default='evolution', help="['evolution', 'graph2vec', 'diff2vec', 'siamese']")
+    
+    args = parser.parse_args()
+    return args
+
+def downsample(ds_rate, ds_cl, graphs):
+    ds_rate = args.ds_rate
+    ds_cl = args.ds_cl
+    ds_graphs = []
+    all_graphs = []
+    num_nodes = 0
+    for graph in graphs:
+        num_nodes += graph.num_nodes
+        if graph.y == ds_cl:
+            ds_graphs.append(graph)
+        all_graphs.append(graph)
+    ds_graphs = ds_graphs[int(len(ds_graphs)*ds_rate):]
+    [all_graphs.remove(graph) for graph in ds_graphs]
+    return all_graphs
+
+def ensure_directories(dataset, gnn_layer):
+    repo_root = get_repo_root()
+    data_dir = os.path.join(repo_root, 'data', dataset, gnn_layer)
+    os.makedirs(data_dir, exist_ok=True)
+    log_data(f"Ensured directory exists: {data_dir}")
 
 def load_dataset(dataset, args):
-
     root_path = os.path.join(get_repo_root(), 'data')
     data = TUDataset(root=f'{root_path}/TUDataset', name=f'{dataset}')
     return data
-    # if False and dataset in ['KKI', 'OHSU']:
-    #     with open(root_path+"\\"+dataset+"\\output\\{}.nel".format(dataset)) as f:
-    #         data = f.readlines()
-    #     f.close()
-    #     graphs, node_index =  gen_graphs(data)
-    #     # create a graph data for each graph in graphs
-    #     dataset = []
-    #     for graph in graphs:
-    #         nodes = graphs[graph]['nodes']
-    #         edges = graphs[graph]['edges']
-    #         label = graphs[graph]['label']
-    #         label = np.array([label])
-    #         label = torch.tensor(label,dtype=torch.long)
-    #         st_nodes = []
-    #         ed_nodes = []
-    #         w= []
-    #         for edge in edges:
-    #             node_s = edges[edge][0]
-    #             node_e = edges[edge][1]
-    #             st_nodes.append(node_index[nodes[edges[edge][0]]])
-    #             ed_nodes.append(node_index[nodes[edges[edge][1]]])
-    #             w.append(float(edges[edge][2]))
-    #         selflinks = list(range(0,len(node_index)))
-    #         st_nodes = st_nodes + selflinks
-    #         ed_nodes = ed_nodes + selflinks
 
-    #         st_nodes = torch.tensor(st_nodes, dtype=torch.long)
-    #         ed_nodes = torch.tensor(ed_nodes, dtype=torch.long)
-    #         w = torch.LongTensor(w)
-    #         edge_index = torch.cat((st_nodes, ed_nodes)).reshape(2,st_nodes.shape[0])
-    #         w = w.reshape(w.shape[0],1)
-            
-    #         spm = to_scipy_sparse_matrix(edge_index)
-    #         spm = spm.toarray()
-    #         spm.astype(np.float64)
-    #         spm = torch.tensor(spm, dtype=torch.float)
-    #         graph = Data(x=spm, edge_index=edge_index, y=label)
-    #         dataset.append(graph)
-        
-    #     dataset = build_x(dataset)
-    #     return dataset
-    # else:
-    #     data = TUDataset(root=f'{root_path}/TUDataset', name=f'{dataset}')
-    #     return data
-
-def build_x(graphs):
-    num_nodes = graphs[0].num_nodes
-    node_tags = []
-    for i in range(len(graphs)):
-        node_tags.append(degree(graphs[i].edge_index[0]).tolist())
-
-    # Extracting unique tag labels
-    tagset = set([])
-    for tag in node_tags:
-        tagset = tagset.union(set(tag))
-    tagset = list(tagset)
-    tag2index = {tagset[i]: i for i in range(len(tagset))}
-
+def print_dataset_stat(args, graphs):
+    a_graphs, a_nodes, a_edges, t_nodes, t_edges = 0, 0, 0, 0, 0
     for graph in graphs:
-        graph.x = torch.zeros(num_nodes, len(tagset))
-
-    for i in range(len(graphs)):
-        graphs[i].x[range(len(node_tags[i])), [tag2index[tag] for tag in node_tags[i]]] = 1
-    return graphs
-
-def base_map(g_reps, pool_candidate):
-    '''
-    input: list of graph representations, node pool candidates
-    output: each graph's representation on candidate pool
-    '''
-    rep = torch.stack(g_reps)
-    return torch.cdist(rep, pool_candidate, p=1)
+        t_nodes += graph.num_nodes
+        t_edges += graph.num_edges
+        if graph.y == args.ds_cl:
+            a_graphs += 1
+            a_nodes += graph.num_nodes
+            a_edges += graph.num_edges
+    
+    log_data(f"Graph Statistics {args.dataset} : ")
+    log_data("{:<8} | {:<10} | {:<10} | {:<10} ".format("Class", "#Graphs", "Avg. V", "Avg. E" ))
+    log_data("{:<8} | {:<10} | {:<10} | {:<10} ".format("G_0", a_graphs, a_nodes/a_graphs, a_edges/a_graphs ))
+    log_data("{:<8} | {:<10} | {:<10} | {:<10} ".format("G_1", len(graphs) - a_graphs,(t_nodes - a_nodes) /(len(graphs) - a_nodes),  (t_edges - a_edges) /(len(graphs) - a_graphs) ))
 
 def pos_graphs_pool(graphs, model, args):
     '''
-    This function returns the node pool, G0 ... GN are all from postive graphs in the trainning set.
+    This function returns the node pool, G0 ... GN are all from positive graphs in the training set.
     '''
-    # if False and args.dataset in ['KKI', 'OHSU']:
-    #     n_reps = []
-    #     g_reps = []
-    #     for graph in graphs:
-    #         graph.to(args.device)
-    #         _, n_rep, g_rep = model(graph)
-    #         n_reps.append(n_rep.detach())
-    #         g_reps.append(g_rep.detach())
-    #     n_reps = torch.stack(n_reps)
-    #     g_reps = torch.stack(g_reps)
-        
-    #     rep_stg= args.n_p_stg
-    #     # return the node pool according to the pool genenrating strategy
-    #     if rep_stg == "mean":
-    #         node_pool = torch.mean(n_reps, 0)
-    #     if rep_stg == "sum":
-    #         node_pool = torch.sum(n_reps, 0)
-    #     if rep_stg == "max":
-    #         node_pool = torch.max(n_reps, 0).values
-    #     if rep_stg == "min":
-    #         node_pool = torch.min(n_reps, 0).values
-    #     if rep_stg == "concat":
-    #         node_pool = n_reps[0]
-    #         for n_rep in n_reps[1:]:
-    #             node_pool = torch.cat((node_pool, n_rep), dim=0)
-    #         node_pool = top_k_nodes(node_pool, g_reps, args)
-    # else:
-    #     n_reps = []
-    #     g_reps = []
-    #     for graph in graphs:
-    #         graph.to(args.device)
-    #         _, n_rep, g_rep = model(graph)
-    #         n_reps.append(n_rep.detach())
-    #         g_reps.append(g_rep.detach())
-    #     node_pool = n_reps[0]
-    #     for n_rep in n_reps[1:]:
-    #         node_pool = torch.cat((node_pool, n_rep), dim=0)
-    #     g_reps = torch.stack(g_reps)
-    #     g_reps = g_reps.squeeze()
-    #     node_pool = top_k_nodes(node_pool, g_reps, args)
     n_reps = []
     g_reps = []
     for graph in graphs:
@@ -274,29 +166,10 @@ def class_wise_loss(pred, y):
     loss = criterion(pred[mask_0], y[mask_0]) + criterion(pred[mask_1], y[mask_1])  # Compute the loss.
     return loss
 
-def create_dirs(args):
-    # check all necessary directories
-    dirs = [
-        f"../data/{args.dataset}/",
-        f"../data/{args.dataset}/{args.gnn_layer}/",
-        f"../data/{args.dataset}/{args.gnn_layer}/SVM"
-    ]
-    for d in dirs:
-        if not os.path.exists(d):
-            print(f"Directory {d} not exist, creating...")
-            os.mkdir(d)
-
-def print_dataset_stat(args, graphs):
-    a_graphs, a_nodes, a_edges, t_nodes, t_edges = 0, 0, 0, 0, 0
-    for graph in graphs:
-        t_nodes += graph.num_nodes
-        t_edges += graph.num_edges
-        if graph.y == args.ds_cl:
-            a_graphs += 1
-            a_nodes += graph.num_nodes
-            a_edges += graph.num_edges
-    
-    log_data(f"Graph Statistics {args.dataset} : ")
-    log_data("{:<8} | {:<10} | {:<10} | {:<10} ".format("Class", "#Graphs", "Avg. V", "Avg. E" ))
-    log_data("{:<8} | {:<10} | {:<10} | {:<10} ".format("G_0", a_graphs, a_nodes/a_graphs, a_edges/a_graphs ))
-    log_data("{:<8} | {:<10} | {:<10} | {:<10} ".format("G_1", len(graphs) - a_graphs,(t_nodes - a_nodes) /(len(graphs) - a_graphs),  (t_edges - a_edges) /(len(graphs) - a_graphs) ))
+def base_map(g_reps, pool_candidate):
+    '''
+    input: list of graph representations, node pool candidates
+    output: each graph's representation on candidate pool
+    '''
+    rep = torch.stack(g_reps)
+    return torch.cdist(rep, pool_candidate, p=1)
