@@ -37,3 +37,8 @@ pip install absl-py argon2-cffi argon2-cffi-bindings astunparse attrs backcall b
 
 # needed to install pip install torch torchvision torchaudio first
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+
+
+
+# run command
+python src/main.py --dataset KKI --gnn_layer GAT --inter_graph_method evolution

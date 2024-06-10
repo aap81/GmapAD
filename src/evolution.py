@@ -193,3 +193,11 @@ def evolution_svm(clf, model, node_pool, args, train_graphs, val_graphs, test_gr
     x_test_pred = clf.predict(X_test)
 
     return clf, x_train_pred, Y_train, x_val_pred, Y_val, x_test_pred, Y_test
+
+def base_map(g_reps, pool_candidate):
+    '''
+    input: list of graph representations, node pool candidates
+    output: each graph's representation on candidate pool
+    '''
+    rep = torch.stack(g_reps)
+    return torch.cdist(rep, pool_candidate, p=1)

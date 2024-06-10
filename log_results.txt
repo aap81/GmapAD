@@ -1,0 +1,359 @@
+1. KKI
+Graph Statistics KKI : 
+Class    | #Graphs    | Avg. V     | Avg. E     
+G_0      | 37         | 26.945945945945947 | 94.70270270270271 
+G_1      | 46         | 26.97826086956522 | 98.56521739130434 
+
+
+GCN train - 16067.37 ms (16.07 seconds)
+SVN eval -  4901.00 ms (4.90 seconds)
+Accuracy: 0.8
+Precision: 1.0
+Recall: 0.8
+F1 Score: 0.8888888888888888
+Confusion Matrix:
+[[0 0]
+ [1 4]]
+
+
+GAT train - 24725.20 ms (24.73 seconds)
+SVN eval - 6450.67 ms (6.45 seconds)
+
+STRT- Accuracy: 1.0
+
+STRT- Precision: 1.0
+
+STRT- Recall: 1.0
+
+STRT- F1 Score: 1.0
+
+STRT- Confusion Matrix:
+
+STRT- [[5]]
+
+2. OHSU
+
+Graph Statistics OHSU : 
+Class    | #Graphs    | Avg. V     | Avg. E     
+G_0      | 35         | 87.62857142857143 | 420.9714285714286 
+G_1      | 44         | 77.54545454545455 | 382.09090909090907 
+Test graph lenght: 5
+
+
+GCN train - 14651.84 ms (14.65 seconds)
+SVN eval - 8618.93 ms (8.62 seconds)
+
+STRT- Accuracy: 1.0
+
+STRT- Precision: 1.0
+
+STRT- Recall: 1.0
+
+STRT- F1 Score: 1.0
+
+STRT- Confusion Matrix:
+
+STRT- [[5]]
+
+GAT train - 22647.47 ms (22.65 seconds)
+SVN eval - 6595.00 ms (6.60 seconds)
+
+STRT- Accuracy: 0.8
+
+STRT- Precision: 1.0
+
+STRT- Recall: 0.8
+
+STRT- F1 Score: 0.8888888888888888
+
+STRT- Confusion Matrix:
+
+STRT- [[0 0]
+ [1 4]]
+
+
+3. MUTAG
+
+Graph Statistics MUTAG : 
+Class    | #Graphs    | Avg. V     | Avg. E     
+G_0      | 63         | 13.936507936507937 | 29.238095238095237 
+G_1      | 125        | 19.944     | 44.8     
+
+Test graph lenght: 12
+
+
+GCN train - 38503.57 ms (38.50 seconds)
+
+SVN eval - 5505.00 ms (5.50 seconds)
+
+STRT- Accuracy: 1.0
+
+STRT- Precision: 1.0
+
+STRT- Recall: 1.0
+
+STRT- F1 Score: 1.0
+
+STRT- Confusion Matrix:
+
+STRT- [[12]]
+
+
+Test graph lenght: 15
+GAT train - 57994.66 ms (57.99 seconds)
+SVN eval - 305835.05 ms (305.84 seconds)
+STRT- Accuracy: 0.9333333333333333
+
+STRT- Precision: 1.0
+
+STRT- Recall: 0.9333333333333333
+
+STRT- F1 Score: 0.9655172413793104
+
+STRT- Confusion Matrix:
+
+STRT- [[ 0  0]
+ [ 1 14]]
+
+
+5. PROTEINS
+Graph Statistics PROTEINS : 
+Class    | #Graphs    | Avg. V     | Avg. E     
+G_0      | 663        | 49.996983408748115 | 188.11161387631975 
+G_1      | 450        | 22.94      | 83.04444444444445 
+
+Test graph lenght: 49
+
+
+GCN train - 140066.82 ms (140.07 seconds)
+
+SVN eval - Time_taken_since_last: 379412.03 ms (379.41 seconds)
+
+STRT- Accuracy: 0.8571428571428571
+
+STRT- Precision: 0.8571428571428571
+
+STRT- Recall: 1.0
+
+STRT- F1 Score: 0.9230769230769231
+
+STRT- Confusion Matrix:
+
+STRT- [[ 0  7]
+ [ 0 42]]
+
+
+Test graph lenght: 47
+GAT train - 227276.24 ms (227.28 seconds)
+SVN eval - 4871127.14 ms (4871.13 seconds)
+
+STRT- Accuracy: 0.851063829787234
+
+STRT- Precision: 0.851063829787234
+
+STRT- Recall: 1.0
+
+STRT- F1 Score: 0.9195402298850575
+
+STRT- Confusion Matrix:
+
+STRT- [[ 0  7]
+ [ 0 40]]
+
+
+6. AIDS
+
+STRT- Class    | #Graphs    | Avg. V     | Avg. E     
+
+STRT- G_0      | 400        | 37.61      | 80.485     
+
+STRT- G_1      | 1600       | 10.213125  | 20.36625   
+
+
+Test graph lenght: 166
+GCN train - 436114.86 ms (436.11 seconds)
+SVN eval - 462154.95 ms (462.15 seconds)
+
+STRT- Accuracy: 0.9819277108433735
+
+STRT- Precision: 0.9819277108433735
+
+STRT- Recall: 1.0
+
+STRT- F1 Score: 0.9908814589665653
+
+STRT- Confusion Matrix:
+
+STRT- [[  0   3]
+ [  0 163]]
+
+
+
+Test graph lenght: 170
+GAT train - 720611.65 ms (720.61 seconds)
+SVN eval -  5185395.60 ms (5185.40 seconds)
+
+STRT- Accuracy: 0.9823529411764705
+
+STRT- Precision: 0.9823529411764705
+
+STRT- Recall: 1.0
+
+STRT- F1 Score: 0.9910979228486647
+
+STRT- Confusion Matrix:
+
+STRT- [[  0   3]
+ [  0 167]]
+
+7. Mutagenicity
+STRT- Class    | #Graphs    | Avg. V     | Avg. E     
+
+STRT- G_0      | 2401       | 29.374427321949188 | 60.565597667638485 
+
+STRT- G_1      | 1936       | 31.487603305785125 | 62.74586776859504 
+
+GCN train - 1476137.59 ms (1476.14 seconds)
+Test graph lenght: 222
+
+SVN evaluation - didnt finish even after 14 hours 51 minutes
+
+
+
+refactored:
+KKI
+GCN
+Training Time: 16067.37 ms (16.07 seconds)
+SVM Evaluation Time: 4901.00 ms (4.90 seconds)
+Metrics:
+Accuracy: 0.8
+Precision: 1.0
+Recall: 0.8
+F1 Score: 0.8888888888888888
+Confusion Matrix:
+lua
+Copy code
+[[0 0]
+ [1 4]]
+GAT
+Training Time: 24725.20 ms (24.73 seconds)
+SVM Evaluation Time: 6450.67 ms (6.45 seconds)
+Metrics:
+Accuracy: 1.0
+Precision: 1.0
+Recall: 1.0
+F1 Score: 1.0
+Confusion Matrix:
+lua
+Copy code
+[[5]]
+OHSU
+GCN
+Training Time: 14651.84 ms (14.65 seconds)
+SVM Evaluation Time: 8618.93 ms (8.62 seconds)
+Metrics:
+Accuracy: 1.0
+Precision: 1.0
+Recall: 1.0
+F1 Score: 1.0
+Confusion Matrix:
+lua
+Copy code
+[[5]]
+GAT
+Training Time: 22647.47 ms (22.65 seconds)
+SVM Evaluation Time: 6595.00 ms (6.60 seconds)
+Metrics:
+Accuracy: 0.8
+Precision: 1.0
+Recall: 0.8
+F1 Score: 0.8888888888888888
+Confusion Matrix:
+lua
+Copy code
+[[0 0]
+ [1 4]]
+MUTAG
+GCN
+Training Time: 38503.57 ms (38.50 seconds)
+SVM Evaluation Time: 5505.00 ms (5.50 seconds)
+Metrics:
+Accuracy: 1.0
+Precision: 1.0
+Recall: 1.0
+F1 Score: 1.0
+Confusion Matrix:
+lua
+Copy code
+[[12]]
+GAT
+Training Time: 57994.66 ms (57.99 seconds)
+SVM Evaluation Time: 305835.05 ms (305.84 seconds)
+Metrics:
+Accuracy: 0.9333333333333333
+Precision: 1.0
+Recall: 0.9333333333333333
+F1 Score: 0.9655172413793104
+Confusion Matrix:
+lua
+Copy code
+[[ 0  0]
+ [ 1 14]]
+PROTEINS
+GCN
+Training Time: 140066.82 ms (140.07 seconds)
+SVM Evaluation Time: 379412.03 ms (379.41 seconds)
+Metrics:
+Accuracy: 0.8571428571428571
+Precision: 0.8571428571428571
+Recall: 1.0
+F1 Score: 0.9230769230769231
+Confusion Matrix:
+lua
+Copy code
+[[ 0  7]
+ [ 0 42]]
+GAT
+Training Time: 227276.24 ms (227.28 seconds)
+SVM Evaluation Time: 4871127.14 ms (4871.13 seconds)
+Metrics:
+Accuracy: 0.851063829787234
+Precision: 0.851063829787234
+Recall: 1.0
+F1 Score: 0.9195402298850575
+Confusion Matrix:
+lua
+Copy code
+[[ 0  7]
+ [ 0 40]]
+AIDS
+GCN
+Training Time: 436114.86 ms (436.11 seconds)
+SVM Evaluation Time: 462154.95 ms (462.15 seconds)
+Metrics:
+Accuracy: 0.9819277108433735
+Precision: 0.9819277108433735
+Recall: 1.0
+F1 Score: 0.9908814589665653
+Confusion Matrix:
+lua
+Copy code
+[[  0   3]
+ [  0 163]]
+GAT
+Training Time: 720611.65 ms (720.61 seconds)
+SVM Evaluation Time: 5185395.60 ms (5185.40 seconds)
+Metrics:
+Accuracy: 0.9823529411764705
+Precision: 0.9823529411764705
+Recall: 1.0
+F1 Score: 0.9910979228486647
+Confusion Matrix:
+lua
+Copy code
+[[  0   3]
+ [  0 167]]
+Mutagenicity
+GCN
+Training Time: 1476137.59 ms (1476.14 seconds)
+SVM Evaluation: Did not finish even after 14 hours 51 minutes
